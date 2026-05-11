@@ -1,0 +1,48 @@
+import axios, { AxiosError, CreateAxiosDefaults } from "axios";
+
+declare module "axios" {
+  interface AxiosRequestConfig {
+    silent?: boolean;
+  }
+}
+
+export const createApiInstance = (config: CreateAxiosDefaults) => {
+  const api = axios.create(config);
+
+  api.interceptors.request.use(
+    (config) => {
+      for (const key in config.params) {
+        if (config.params[key] === undefined) {
+          delete config.params[key];
+        }
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
+  api.interceptors.response.use(
+    (response) => response,
+    (error: AxiosError<any, any>) => {
+      const data = error.response?.data;
+
+      if (!error.config?.silent) {
+        // apiNotify.error(`api_error.${data.code}`);
+      }
+      console.error(error);
+
+      return Promise.reject(error);
+    },
+  );
+
+  return api;
+};
+
+export const api = createApiInstance({
+  baseURL: (process.env.NEXT_PUBLIC_API_URL ?? "") + "/api",
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
